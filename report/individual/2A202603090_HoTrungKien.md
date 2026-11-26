@@ -19,6 +19,8 @@ Ghi dự đoán cá nhân dựa trên ảnh BEV trong `d14_2A202603090/png_A/`, 
 
 Chi phí sửa được tính trong bán kính 50 m theo công thức `0,3 × xóa + 1,0 × thêm + 0,5 × sửa`. [Kết quả 24 cấu hình đã thử](../../d14_2A202603090/sweep.csv).
 
+Nhãn tham chiếu tập A có 33 hộp trong phạm vi chấm. Tất cả ba frame đều có thay đổi so với pre-label gốc. Trên `s04f39`, phép chấm ghi nhận một hộp `Truck` bị sót cần thêm và hai hộp đã khớp cần chỉnh. [Nhãn tham chiếu tập A](../../d14_2A202603090/ref_A.json).
+
 | Frame | Chi phí gốc | Chi phí với `best_config.json` |
 |---|---:|---:|
 | `s03f25` | 7,2 | 8,4 |
@@ -39,21 +41,27 @@ Lượt chấm nào cũng chọn một tổ hợp khác nhau và chi phí đều
 
 ## 3. Trước/sau (bước 8)
 
-![so sánh](../../d14_<ID>/compare/<frame>.jpg)
+![So sánh BEV của frame s05f00. Cấu hình gốc ở bên trái và cấu hình đã tune ở bên phải.](../../d14_2A202603090/compare/s05f00.jpg)
 
-- `scripts/pp_compare.py` báo giảm (hoặc tăng) ...% công sửa trên tập A.
-- Dự đoán ở mục 1 đúng hay sai? Giải thích bằng số box xóa/thêm/sửa: ...
+Trên `s05f00`, số hộp cần xóa giảm từ 25 xuống 9, số hộp cần thêm bằng 0 và số hộp cần sửa bằng 1 ở cả hai cấu hình. Chi phí của frame giảm từ 8,0 xuống 3,2. Hộp màu đỏ cần xóa, hộp màu vàng cần sửa và hộp màu xanh lá được giữ lại.
+
+Trên cả ba frame A, `scripts/pp_compare.py` báo chi phí giảm từ 19,3 xuống 14,7, tương đương 23,8% (script làm tròn thành 24%). Số hộp cần xóa giảm từ 56 xuống 19, số hộp cần sửa giảm từ 3 xuống 2 và số hộp cần thêm tăng từ 1 lên 8. Bớt 37 lượt xóa giảm 11,1 điểm chi phí và bớt một lượt sửa giảm 0,5 điểm. Bảy lượt thêm phát sinh làm tăng 7,0 điểm, nên chi phí giảm ròng 4,6 điểm.
+
+Dự đoán ở mục 1 đúng trên tập A. Tăng `score_thr` từ `0.1` lên `0.4` lọc được nhiều hộp thừa, và phần chi phí giảm nhờ bớt xóa và bớt sửa lớn hơn chi phí phát sinh do phải thêm hộp. Hiệu quả khác nhau giữa các frame. Chi phí trên `s03f25` vẫn tăng từ 7,2 lên 8,4.
 
 ## 4. Tập B
 
-Số đo từ `scripts/pp_prelabel.py --frames d14_<ID>/frames_B.txt --config d14_<ID>/best_config.json --gt d14_<ID>/ref_B.json`:
+Dùng phép chấm của `scripts/pp_prelabel.py` để đối chiếu `pred_B.json` từ `best_config.json` với bản `ref_B.json` đã sửa. Trong bán kính 50 m, 128 trong 206 hộp dự đoán được ghép với 152 hộp tham chiếu trên 12 frame. Trên `s01f02`, hai hộp xe máy có người lái đã được đổi từ `Car` sang `Cyclist` sau khi đối chiếu ảnh camera.
 
 | Xóa | Thêm | Sửa | Chi phí |
 |---:|---:|---:|---:|
-| | | | |
+| 78 | 24 | 15 | 54,9 |
 
-- Loại box tốn công sửa nhất ở tập B: ...
+Lớp `Car` có chi phí sửa cao nhất (24,5 điểm), gồm 50 hộp cần xóa, 3 hộp cần thêm và 13 hộp cần sửa. Khi xét theo loại thao tác trên toàn tập B, thêm hộp chiếm 24,0 điểm, xóa hộp chiếm 23,4 điểm và sửa hộp chiếm 7,5 điểm. Frame `s01f02` có chi phí cao nhất (9,3 điểm), với 6 hộp cần xóa, 6 hộp cần thêm và 3 hộp cần sửa.
 
 ## 5. Giới hạn
 
-- Nêu ít nhất 2 giới hạn (ví dụ: chỉ 3 frame tune; model KITTI không có Truck/Bus; chi phí là công thức, chưa phải thời gian sửa thật): ...
+- Tập A chỉ có ba frame. Mỗi lượt leave-one-out chọn tham số trên hai frame, và ba lượt cho ba tổ hợp khác nhau. Mức giảm chi phí trên tập A vì vậy chưa đủ để ước lượng mức cải thiện trên dữ liệu khác.
+- Trọng số PointPillars huấn luyện trên KITTI chỉ nhận diện trực tiếp `Car`, `Cyclist` và `Pedestrian`. `Truck` và `Bus` được suy ra bằng quy tắc kích thước. Trên tập B, phép chấm vẫn ghi nhận 7 hộp `Bus` và 2 hộp `Truck` cần thêm.
+- Chi phí sửa là điểm quy đổi theo trọng số của bài lab và chỉ xét hộp có tâm trong bán kính 50 m. Kết quả chưa cho biết thời gian thao tác trên CVAT.
+- Phép rà nhãn dùng `scripts/vf_qa.py` để phát hiện kích thước bất thường, rồi đối chiếu các hộp được cảnh báo với ảnh camera. Kích thước và số điểm LiDAR chỉ là dấu hiệu để rà, nhất là khi vật thể bị che khuất.
