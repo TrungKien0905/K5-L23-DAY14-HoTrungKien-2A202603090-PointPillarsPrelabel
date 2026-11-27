@@ -1,7 +1,7 @@
 # Báo cáo Day 14 — Hồ Trung Kiên — 2A202603090
 
 - Mã học viên dùng với `--student` là `2A202603090`.
-- `seed_tag` trong `frames_A.txt` là `393590736f`.
+- `seed_tag` trong `frames_A.txt` là `AC-_MUFc`.
 
 ## 1. Dự đoán trước sweep (bước 5b)
 
